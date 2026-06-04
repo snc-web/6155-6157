@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Separator Pro | Dhiraj</title>
+    <!-- Include SheetJS for Excel processing -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --radius: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            padding: 20px 15px;
+            line-height: 1.5;
+        }
+
+        .app-container {
+            background: var(--card);
+            width: 100%;
+            max-width: 480px;
+            border-radius: var(--radius);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .author-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 99px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 26px;
+            font-weight: 800;
+            color: var(--text-main);
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .upload-area {
+            border: 2px dashed #cbd5e1;
+            border-radius: var(--radius);
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            margin-bottom: 25px;
+            background: #f1f5f9;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary);
+            background: #eef2ff;
+            transform: translateY(-2px);
+        }
+
+        .upload-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: 700;
+            font-size: 13px;
+            margin-bottom: 8px;
+            color: var(--text-main);
+            padding-left: 4px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            box-sizing: border-box;
+            outline: none;
+            background: #ffffff;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 12px;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .btn-matched { background: #3b82f6; }
+        .btn-rest { background: #f59e0b; }
+
+        .btn:active { transform: translateY(0); }
+
+        #status-msg {
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 14px;
+            text-align: center;
+            display: none;
+            margin-bottom: 20px;
+            font-weight: 600;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .success { background: #ecfdf5; color: #065f46; border: 1px solid #d1fae5; }
+        .info { background: #eff6ff; color: #1e40af; border: 1px solid #dbeafe; }
+
+        .result-card {
+            display: none;
+            margin-top: 25px;
+            padding: 20px;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            animation: slideIn 0.4s ease-out;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .card-title {
+            font-weight: 800;
+            font-size: 14px;
+            color: var(--text-main);
+        }
+
+        .count-badge {
+            background: #f1f5f9;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+
+        textarea {
+            width: 100%;
+            height: 120px;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            box-sizing: border-box;
+            background: #fafafa;
+            resize: none;
+            outline: none;
+        }
+
+        textarea:focus { border-color: var(--primary); }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <header>
+        <span class="author-badge">Author: Dhiraj</span>
+        <h1>Account Separator</h1>
+        <p class="subtitle">Premium Spreadsheet Tool</p>
+    </header>
+
+    <div class="upload-area" id="drop-zone">
+        <span class="upload-icon">âœ¨</span>
+        <div id="file-name" style="font-weight: 700; color: var(--text-main);">Drop your XLSX file here</div>
+        <div style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">or tap to browse files</div>
+        <input type="file" id="file-input" style="display: none" accept=".xlsx,.xls,.csv,.txt">
+    </div>
+
+    <div class="input-group">
+        <label>Filter Prefix Range</label>
+        <input type="text" id="prefix-input" value="6155-6157" placeholder="e.g. 6155-6157">
+    </div>
+
+    <button class="btn btn-primary" id="process-btn">
+        <span>ðŸš€</span> Process All Accounts
+    </button>
+
+    <div id="status-msg"></div>
+
+    <!-- Matched Accounts Section -->
+    <div class="result-card" id="matched-section">
+        <div class="card-header">
+            <span class="card-title">MATCHED ACCOUNTS</span>
+            <span class="count-badge" id="matched-count">0 Rows</span>
+        </div>
+        <button class="btn btn-matched" id="copy-matched-btn">ðŸ“‹ Copy Matched</button>
+        <textarea id="matched-text" readonly></textarea>
+    </div>
+
+    <!-- Rest of Accounts Section -->
+    <div class="result-card" id="rest-section" style="margin-top: 15px;">
+        <div class="card-header">
+            <span class="card-title">REST OF ACCOUNTS</span>
+            <span class="count-badge" id="rest-count">0 Rows</span>
+        </div>
+        <button class="btn btn-rest" id="copy-rest-btn">ðŸ“‹ Copy Rest</button>
+        <textarea id="rest-text" readonly></textarea>
+    </div>
+
+    <div class="footer">
+        Designed with â¤ï¸ by Dhiraj
+    </div>
+</div>
+
+<script>
+    const fileInput = document.getElementById('file-input');
+    const dropZone = document.getElementById('drop-zone');
+    const fileNameDisplay = document.getElementById('file-name');
+    const prefixInput = document.getElementById('prefix-input');
+    const processBtn = document.getElementById('process-btn');
+    const statusMsg = document.getElementById('status-msg');
+
+    let sheetData = [];
+
+    dropZone.onclick = () => fileInput.click();
+    fileInput.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        fileNameDisplay.textContent = file.name;
+        showStatus("File analyzed. Ready to process!", "info");
+        try {
+            const data = await file.arrayBuffer();
+            const workbook = XLSX.read(data);
+            sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
+        } catch (err) { showStatus("Error reading file.", "error"); }
+    };
+
+    processBtn.onclick = () => {
+        if (sheetData.length === 0) { showStatus("Please select a file first!", "info"); return; }
+        
+        const range = prefixInput.value.trim();
+        const prefixes = [];
+        const match = range.match(/^(\d+)-(\d+)$/);
+        if (match) {
+            for (let i = parseInt(match[1]); i <= parseInt(match[2]); i++) prefixes.push(i.toString());
+        } else {
+            range.split(',').forEach(p => { if(p.trim()) prefixes.push(p.trim()); });
+        }
+
+        const matched = [];
+        const rest = [];
+
+        sheetData.forEach(row => {
+            if (!row || row.length === 0) return;
+            const firstCol = String(row[0]).trim();
+            if (prefixes.some(p => firstCol.startsWith(p))) {
+                matched.push(row);
+            } else {
+                rest.push(row);
+            }
+        });
+
+        // Update Matched Section
+        document.getElementById('matched-section').style.display = 'block';
+        document.getElementById('matched-count').textContent = matched.length + " Rows";
+        document.getElementById('matched-text').value = matched.map(row => row.join("\t")).join("\n");
+
+        // Update Rest Section
+        document.getElementById('rest-section').style.display = 'block';
+        document.getElementById('rest-count').textContent = rest.length + " Rows";
+        document.getElementById('rest-text').value = rest.map(row => row.join("\t")).join("\n");
+
+        showStatus("Separation Complete! âœ¨", "success");
+    };
+
+    function setupCopy(btnId, textId) {
+        document.getElementById(btnId).onclick = function() {
+            const el = document.getElementById(textId);
+            el.select();
+            el.setSelectionRange(0, 99999);
+            try {
+                document.execCommand('copy');
+                const originalText = this.innerHTML;
+                this.innerHTML = "âœ… Copied Successfully!";
+                setTimeout(() => { this.innerHTML = originalText; }, 2000);
+            } catch (e) {
+                showStatus("Manual copy: Select text and copy.", "info");
+            }
+        };
+    }
+
+    setupCopy('copy-matched-btn', 'matched-text');
+    setupCopy('copy-rest-btn', 'rest-text');
+
+    function showStatus(msg, type) {
+        statusMsg.textContent = msg;
+        statusMsg.className = type;
+        statusMsg.style.display = 'block';
+    }
+</script>
+
+</body>
+</html>
