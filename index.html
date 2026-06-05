@@ -258,6 +258,321 @@
 <div class="container">
     <div class="author-tag"><span>AUTHOR: DHIRAJ</span></div>
     <h1>Account Separator</h1>
+    <p class="desc">The Ultimate Intelligence</p>
+
+    <div class="upload-card" id="drop-zone">
+        <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+        <div id="file-name" style="font-weight: 700; font-size: 18px;">Import File</div>
+        <div style="font-size: 13px; color: var(--text-s); margin-top: 8px;">Supports XLSX, XLS, and TXT</div>
+        <input type="file" id="file-input" style="display: none" accept=".xlsx,.xls,.csv,.txt">
+    </div>
+
+    <div class="input-box">
+        <label>Filter Prefix Range</label>
+        <input type="text" id="prefix-input" value="6155-6157">
+    </div>
+
+    <div class="option-row" id="dedupe-toggle">
+        <div class="checkbox checked" id="dedupe-box">
+            <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </div>
+        <div style="font-size: 14px; font-weight: 700;">STRICT DEDUPLICATION (ID BEFORE |)</div>
+    </div>
+
+    <button class="btn-main" id="process-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        PROCESS ACCOUNTS
+    </button>
+
+    <div id="status"></div>
+
+    <div class="result-group" id="results">
+        <div class="res-card">
+            <div class="res-head">
+                <span class="res-title">Matched Accounts</span>
+                <span class="res-count" id="m-count">0</span>
+            </div>
+            <button class="btn-copy" id="copy-m">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                Copy Matched
+            </button>
+            <textarea id="m-text" readonly></textarea>
+        </div>
+        <div class="res-card">
+            <div class="res-head">
+                <span class="res-title">Remaining Accounts</span>
+                <span class="res-count" id="r-count" style="background: var(--secondary);">0</span>
+            </div>
+            <button class="btn-copy" id="copy-r">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                Copy Remaining
+            </button>
+            <textarea id="r-text" readonly></textarea>
+        </div>
+    </div>
+
+    <div class="footer-text">CHUTIYA LOOG SE DUUR <DHIRAJ</div>
+</div>
+
+<script>
+    const fileInput = document.getElementById('file-input');
+    const dropZone = document.getElementById('drop-zone');
+    const fileNameDisplay = document.getElementById('file-name');
+    const prefixInput = document.getElementById('prefix-input');
+    const processBtn = document.getElementById('process-btn');
+    const status = document.getElementById('status');
+    const dedupeBox = document.getElementById('dedupe-box');
+    const dedupeToggle = document.getElementById('dedupe-toggle');
+
+    let rawRows = [];
+    let isDedupe = true;
+
+    dedupeToggle.onclick = () => { isDedupe = !isDedupe; dedupeBox.classList.toggle('checked'); };
+    dropZone.onclick = () => fileInput.click();
+
+    fileInput.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        fileNameDisplay.textContent = file.name;
+        showStatus("Analyzing file structure...", "st-info");
+        
+        try {
+            if (file.name.toLowerCase().endsWith('.txt')) {
+                const text = await file.text();
+                rawRows = text.split(/\r?\n/).filter(l => l.trim()).map(l => [l]);
+            } else {
+                const data = await file.arrayBuffer();
+                const workbook = XLSX.read(data);
+                rawRows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
+            }
+            showStatus("Loaded " + rawRows.length + " rows successfully", "st-success");
+        } catch (err) { showStatus("Error reading file format", "st-error"); }
+    };
+
+    processBtn.onclick = () => {
+        if (rawRows.length === 0) { showStatus("Please import a file first", "st-info"); return; }
+        
+        const range = prefixInput.value.trim();
+        const prefixes = [];
+        const match = range.match(/^(\d+)-(\d+)$/);
+        if (match) {
+            for (let i = parseInt(match[1]); i <= parseInt(match[2]); i++) prefixes.push(i.toString());
+        } else {
+            range.split(',').forEach(p => { if(p.trim()) prefixes.push(p.trim()); });
+        }
+
+        let matched = [];
+        let rest = [];
+        const seenIds = new Set();
+
+        rawRows.forEach(row => {
+            if (!row || row.length === 0 || row[0] === undefined || row[0] === null) return;
+            
+            // STRICT ID EXTRACTION from Column A
+            const firstCell = String(row[0]).trim();
+            const cleanId = firstCell.split('|')[0].trim();
+
+            if (isDedupe) {
+                if (seenIds.has(cleanId)) return;
+                seenIds.add(cleanId);
+            }
+
+            if (prefixes.some(p => cleanId.startsWith(p))) {
+                matched.push(row);
+            } else {
+                rest.push(row);
+            }
+        });
+
+        document.getElementById('results').style.display = 'block';
+        document.getElementById('m-count').textContent = matched.length;
+        document.getElementById('r-count').textContent = rest.length;
+        
+        document.getElementById('m-text').value = matched.map(row => row.join("\t")).join("\n");
+        document.getElementById('r-text').value = rest.map(row => row.join("\t")).join("\n");
+        
+        showStatus("Processing Complete ✨", "st-success");
+        setTimeout(() => { document.getElementById('results').scrollIntoView({ behavior: 'smooth' }); }, 300);
+    };
+
+    function setupCopy(btnId, textId) {
+        document.getElementById(btnId).onclick = function() {
+            const el = document.getElementById(textId);
+            el.select();
+            el.setSelectionRange(0, 99999);
+            try {
+                document.execCommand('copy');
+                const oldText = this.innerHTML;
+                this.innerHTML = "✅ COPIED TO CLIPBOARD";
+                setTimeout(() => { this.innerHTML = oldText; }, 2000);
+            } catch (e) { showStatus("Manual copy required", "st-info"); }
+        };
+    }
+
+    setupCopy('copy-m', 'm-text');
+    setupCopy('copy-r', 'r-text');
+
+    function showStatus(msg, type) {
+        status.textContent = msg;
+        status.className = type;
+        status.style.display = 'block';
+    }
+</script>
+
+</body>
+</html>            transform: scale(1.01);
+        }
+
+        .upload-card svg { width: 48px; height: 48px; margin-bottom: 15px; stroke: var(--primary); fill: none; }
+
+        .input-box { margin-bottom: 20px; }
+        .input-box label {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-s);
+            margin-bottom: 10px;
+            margin-left: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 16px 20px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        input[type="text"]:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15); }
+
+        .option-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 30px;
+            padding: 14px 18px;
+            background: var(--glass);
+            border-radius: 16px;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+
+        .option-row:hover { border-color: var(--border); background: rgba(255,255,255,0.08); }
+
+        .checkbox {
+            width: 22px;
+            height: 22px;
+            border-radius: 7px;
+            border: 2px solid var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+
+        .checkbox.checked { background: var(--primary); }
+        .checkbox svg { width: 14px; height: 14px; stroke: white; display: none; fill: none; }
+        .checkbox.checked svg { display: block; }
+
+        .btn-main {
+            width: 100%;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: none;
+            border-radius: 20px;
+            padding: 20px;
+            color: white;
+            font-size: 16px;
+            font-weight: 800;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            box-shadow: 0 10px 30px -5px rgba(139, 92, 246, 0.5);
+            transition: 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-main:hover { transform: translateY(-3px); box-shadow: 0 15px 35px -5px rgba(139, 92, 246, 0.6); }
+
+        #status {
+            margin-top: 25px;
+            padding: 16px;
+            border-radius: 16px;
+            font-size: 14px;
+            text-align: center;
+            display: none;
+            font-weight: 700;
+        }
+
+        .st-success { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .st-info { background: rgba(6, 182, 212, 0.15); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.3); }
+
+        .result-group { display: none; margin-top: 40px; animation: slideUp 0.6s ease-out; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+
+        .res-card { background: var(--glass); border: 1px solid var(--border); border-radius: 28px; padding: 25px; margin-bottom: 25px; }
+        .res-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .res-title { font-size: 13px; font-weight: 800; color: var(--text-s); text-transform: uppercase; letter-spacing: 1.5px; }
+        .res-count { background: var(--primary); color: white; padding: 4px 12px; border-radius: 100px; font-size: 11px; font-weight: 800; }
+
+        .btn-copy {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px;
+            color: white;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: 0.2s;
+        }
+
+        .btn-copy:hover { background: rgba(255, 255, 255, 0.15); border-color: var(--text-s); }
+
+        textarea {
+            width: 100%;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 15px;
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            outline: none;
+            resize: none;
+            line-height: 1.6;
+        }
+
+        .footer-text { text-align: center; margin-top: 50px; font-size: 12px; color: var(--text-s); font-weight: 600; letter-spacing: 0.5px; }
+    </style>
+</head>
+<body>
+
+<div class="glow"></div>
+
+<div class="container">
+    <div class="author-tag"><span>AUTHOR: DHIRAJ</span></div>
+    <h1>Account Separator</h1>
     <p class="desc">The Ultimate Aesthetic Intelligence</p>
 
     <div class="upload-card" id="drop-zone">
