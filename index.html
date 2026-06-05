@@ -258,7 +258,7 @@
 <div class="container">
     <div class="author-tag"><span>AUTHOR: DHIRAJ</span></div>
     <h1>Account Separator</h1>
-    <p class="desc">The Ultimate Aesthetic Intelligence</p>
+    <p class="desc">Professional Data Management Tool</p>
 
     <div class="upload-card" id="drop-zone">
         <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -315,7 +315,7 @@
         </div>
     </div>
 
-    <div class="footer-text">Modern Era Aesthetic Tool • Dhiraj © 2026</div>
+    <div class="footer-text">Advanced Tool • Dhiraj © 2026</div>
 </div>
 
 <script>
@@ -338,7 +338,7 @@
         const file = e.target.files[0];
         if (!file) return;
         fileNameDisplay.textContent = file.name;
-        showStatus("Analyzing file structure...", "st-info");
+        showStatus("Analyzing file...", "st-info");
         
         try {
             if (file.name.toLowerCase().endsWith('.txt')) {
@@ -349,12 +349,12 @@
                 const workbook = XLSX.read(data);
                 rawRows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
             }
-            showStatus("Loaded " + rawRows.length + " rows successfully", "st-success");
-        } catch (err) { showStatus("Error reading file format", "st-error"); }
+            showStatus("Loaded " + rawRows.length + " rows", "st-success");
+        } catch (err) { showStatus("Error reading file", "st-error"); }
     };
 
     processBtn.onclick = () => {
-        if (rawRows.length === 0) { showStatus("Please import a file first", "st-info"); return; }
+        if (rawRows.length === 0) { showStatus("Import a file first", "st-info"); return; }
         
         const range = prefixInput.value.trim();
         const prefixes = [];
@@ -372,7 +372,6 @@
         rawRows.forEach(row => {
             if (!row || row.length === 0 || row[0] === undefined || row[0] === null) return;
             
-            // STRICT ID EXTRACTION from Column A
             const firstCell = String(row[0]).trim();
             const cleanId = firstCell.split('|')[0].trim();
 
@@ -395,7 +394,7 @@
         document.getElementById('m-text').value = matched.map(row => row.join("\t")).join("\n");
         document.getElementById('r-text').value = rest.map(row => row.join("\t")).join("\n");
         
-        showStatus("Processing Complete ✨", "st-success");
+        showStatus("Complete! ✨", "st-success");
         setTimeout(() => { document.getElementById('results').scrollIntoView({ behavior: 'smooth' }); }, 300);
     };
 
@@ -407,7 +406,7 @@
             try {
                 document.execCommand('copy');
                 const oldText = this.innerHTML;
-                this.innerHTML = "✅ COPIED TO CLIPBOARD";
+                this.innerHTML = "✅ COPIED";
                 setTimeout(() => { this.innerHTML = oldText; }, 2000);
             } catch (e) { showStatus("Manual copy required", "st-info"); }
         };
